@@ -379,5 +379,5 @@ if st.button("Generate Card", type="primary"):
 # Footer
 st.markdown("---")
 st.markdown(
-    "💕 Create beautiful personalized wedding ceremony/reception cards in seconds!"
+    "💕 Create beautiful personalized wedding reception cards in seconds!"
 )
