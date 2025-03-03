@@ -226,7 +226,7 @@ def generate_card(
     # )
 
     # Date display
-    y_position += 55
+    y_position += 50
     draw.text(
         (card_width / 2, y_position),
         formatted_month,
