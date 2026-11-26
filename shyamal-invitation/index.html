@@ -303,37 +303,24 @@
         transform: translateY(-120%);
         opacity: 0;
       }
-      .gate-greeting {
+      .gate-invited {
         position: absolute;
         left: 50%;
-        top: calc(50% - 165px);
+        top: calc(50% - 150px);
         transform: translate(-50%, -100%);
         z-index: 3;
-        width: min(92vw, 560px);
-        padding: 18px 22px;
-        text-align: center;
+        padding: 12px 26px;
+        white-space: nowrap;
+        font-family: var(--caps);
+        font-size: clamp(0.66rem, 2.9vw, 0.82rem);
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
         color: var(--gold-light);
-        background: radial-gradient(closest-side, rgba(42, 4, 12, 0.92), rgba(42, 4, 12, 0.7) 65%, transparent);
+        background: radial-gradient(closest-side, rgba(42, 4, 12, 0.7), rgba(42, 4, 12, 0.35) 70%, transparent);
+        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
         transition: opacity 0.8s ease;
       }
-      .gate-dear {
-        font-family: var(--script);
-        font-size: clamp(2rem, 8vw, 2.7rem);
-        line-height: 1.15;
-        color: var(--gold-light);
-        overflow-wrap: anywhere;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-      }
-      .gate-greeting small {
-        display: block;
-        margin-top: 6px;
-        font-family: var(--caps);
-        font-size: 0.72rem;
-        letter-spacing: 0.32em;
-        text-transform: uppercase;
-        color: var(--gold-soft);
-      }
-      .gate.open .gate-greeting {
+      .gate.open .gate-invited {
         opacity: 0;
       }
       .seal {
@@ -520,13 +507,33 @@
         max-width: 410px;
         margin: 18px auto 0;
       }
-      .dear {
-        font-family: var(--script);
-        font-size: clamp(2rem, 8.5vw, 2.6rem);
-        line-height: 1.2;
+      .quote,
+      .hosts,
+      .hosts-line,
+      .closing,
+      .lead {
+        text-wrap: balance;
+      }
+      .hosts {
+        margin-top: 26px;
+        font-size: clamp(1.08rem, 4.6vw, 1.28rem);
+        font-weight: 600;
+        line-height: 1.35;
         color: var(--maroon);
-        margin-top: 22px;
-        overflow-wrap: anywhere;
+      }
+      .hosts-line {
+        margin-top: 4px;
+        font-style: italic;
+        font-size: 1.1rem;
+        color: var(--muted);
+      }
+      .closing {
+        font-style: italic;
+        font-size: clamp(1.25rem, 5vw, 1.5rem);
+        line-height: 1.45;
+        color: var(--maroon);
+        max-width: 420px;
+        margin: 0 auto;
       }
       .lead {
         font-size: 1.16rem;
@@ -896,12 +903,6 @@
         font-size: 1.08rem;
         color: #ecd7ae;
       }
-      footer .parents {
-        font-style: normal;
-        font-size: 1.15rem;
-        color: var(--gold-light);
-        margin-top: 2px;
-      }
       footer .btn {
         margin-top: 24px;
         background: transparent;
@@ -1022,8 +1023,7 @@
   <body class="locked">
     <!-- =================================================================
          Wedding details used by the page (dates, venue, map, music) live in
-         the CONFIG block at the bottom. Personalise a link by adding
-         ?to=Guest%20Name to the address, e.g. /?to=Mr.%20Rahim%20Uddin
+         the CONFIG block at the bottom. One page for every guest.
          ================================================================= -->
 
     <!-- Reusable shapes for the marigold garlands -->
@@ -1078,10 +1078,7 @@
 
       <div class="gate-toran toran" id="gateToran" aria-hidden="true"></div>
 
-      <div class="gate-greeting" id="gateGreeting" hidden>
-        <div class="gate-dear">Dear <span class="guest-name"></span></div>
-        <small>You are cordially invited</small>
-      </div>
+      <div class="gate-invited">You are cordially invited</div>
 
       <button class="seal" id="openBtn" aria-label="Open the invitation">
         <div>
@@ -1103,17 +1100,10 @@
           <p class="invocation">
             <span class="danda">॥</span>SHREE SHREE GANESHAYA NAMAH<span class="danda">॥</span>
           </p>
-          <p class="quote">
-            “With the grace of the Almighty and His divine blessings, we are delighted to
-            celebrate a beautiful new beginning in our family’s journey.”
-          </p>
+          <p class="quote">“By the grace of the Almighty, a beautiful new beginning.”</p>
 
-          <p class="dear" id="heroGreeting" hidden>Dear <span class="guest-name"></span></p>
-
-          <p class="lead">
-            We, <strong>Gouranga Chandra Roy &amp; Jharna Rani Roy</strong>, cordially invite you
-            to grace the auspicious occasion of the wedding ceremony of our beloved younger son
-          </p>
+          <p class="hosts">Gouranga Chandra Roy &amp; Jharna Rani Roy</p>
+          <p class="hosts-line">joyfully invite you to the wedding of their beloved younger son</p>
 
           <h1 class="names">
             <span>Shyamal Roy</span><span class="with">with</span><span>Tropa Rani Shill</span>
@@ -1138,11 +1128,7 @@
       </section>
 
       <section class="reveal">
-        <p class="eyebrow">With love</p>
-        <p class="lead" style="margin-top: 4px">
-          Your gracious presence, warm wishes, and heartfelt blessings will make this joyous
-          occasion even more special and memorable for our family.
-        </p>
+        <p class="closing">Your presence and blessings will make our joy complete.</p>
 
         <p class="eyebrow count-label" id="countLabel">Until the Shubho Bibaho</p>
         <div class="count" id="count" aria-live="polite">
@@ -1197,7 +1183,7 @@
         </svg>
         <div class="venue-card">
           <h3 data-k="venueName">Grand Prince Chinese Restaurant</h3>
-          <p data-k="venueAddress">Mirpur-1, Dhaka-1216, Bangladesh</p>
+          <p data-k="venueAddress">Mirpur-1, Dhaka</p>
           <div class="btn-row">
             <a class="btn solid" id="mapBtn" target="_blank" rel="noopener">Open in Google Maps</a>
           </div>
@@ -1212,8 +1198,7 @@
       <svg class="foot-mandala" id="footMandala" viewBox="-60 -60 120 120" aria-hidden="true"></svg>
       <div class="mono">Shyamal &amp; Tropa</div>
       <div class="bibaho"><span class="danda">॥</span>SHUBHO BIBAHO<span class="danda">॥</span></div>
-      <p>With love and blessings</p>
-      <p class="parents">Gouranga Chandra Roy &amp; Jharna Rani Roy</p>
+      <p>With love and blessings, the Roy family</p>
       <button class="btn" type="button" id="shareBtn">Share the invitation</button>
     </footer>
 
@@ -1226,7 +1211,7 @@
       const CONFIG = {
         couple: "Shyamal Roy & Tropa Rani Shill",
         venueName: "Grand Prince Chinese Restaurant",
-        venueAddress: "Mirpur-1, Dhaka-1216, Bangladesh",
+        venueAddress: "Mirpur-1, Dhaka",
         // What Google Maps should search for (the Mirpur-1 branch, not Shyamoli)
         mapQuery: "Grand Prince Thai & Chinese Restaurant, Mirpur 1, Dhaka",
         events: {
@@ -1252,19 +1237,6 @@
       const $$ = (s) => document.querySelectorAll(s);
       const SVGNS = "http://www.w3.org/2000/svg";
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      /* ---------- personal greeting: ?to=Guest Name ---------- */
-      const params = new URLSearchParams(location.search);
-      const guest = (params.get("to") || params.get("guest") || "").trim().slice(0, 80);
-      if (guest) {
-        $$(".guest-name").forEach((el) => (el.textContent = guest));
-        // long names ("… Chowdhury & Family") get a smaller script so they stay compact
-        const size = guest.length > 36 ? "1.45rem" : guest.length > 22 ? "1.75rem" : "";
-        if (size) $(".gate-dear").style.fontSize = size;
-        $("#gateGreeting").hidden = false;
-        $("#heroGreeting").hidden = false;
-        document.title = `Dear ${guest} · Shyamal & Tropa · Shubho Bibaho`;
-      }
 
       /* ---------- config-driven text ---------- */
       $$("[data-k]").forEach((el) => {
@@ -1551,24 +1523,67 @@
         bgm.onpause = () => musicBtn.classList.remove("playing");
       }
 
-      /* ---------- share (always the plain link, never a guest's name) ---------- */
+      /* ---------- share ---------- */
       const toast = (msg) => {
         const t = $("#toast");
         t.textContent = msg;
         t.classList.add("show");
         setTimeout(() => t.classList.remove("show"), 2200);
       };
-      $("#shareBtn").addEventListener("click", async () => {
-        const url = location.origin + location.pathname;
-        const data = { title: "Shyamal & Tropa · Shubho Bibaho", text: "You are cordially invited to the wedding of Shyamal Roy with Tropa Rani Shill.", url };
-        try {
-          if (navigator.share) await navigator.share(data);
-          else {
-            await navigator.clipboard.writeText(url);
-            toast("Link copied");
+      // When served through Streamlit the page sits inside frames, so share the
+      // address of the outermost page the guest actually opened.
+      function siteUrl() {
+        for (const w of [window.top, window.parent, window]) {
+          try {
+            const u = new URL(w.location.href);
+            if (u.protocol === "http:" || u.protocol === "https:") {
+              return u.origin + u.pathname.replace(/\/~\/\+\/?$/, "/");
+            }
+          } catch (e) {
+            /* cross-origin frame: try the next one */
           }
-        } catch (err) {
-          /* sharing cancelled */
+        }
+        return document.referrer || location.href;
+      }
+      function legacyCopy(text) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        ta.remove();
+        if (!ok) throw new Error("copy failed");
+      }
+      async function copyLink(url) {
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch (e) {
+          legacyCopy(url);
+        }
+      }
+      $("#shareBtn").addEventListener("click", async () => {
+        const url = siteUrl();
+        const data = {
+          title: "Shyamal & Tropa · Shubho Bibaho",
+          text: "You are cordially invited to the wedding of Shyamal Roy with Tropa Rani Shill.",
+          url,
+        };
+        if (navigator.share) {
+          try {
+            await navigator.share(data);
+            return;
+          } catch (err) {
+            if (err && err.name === "AbortError") return; // guest closed the share sheet
+            // otherwise sharing is blocked here (e.g. inside a frame): copy instead
+          }
+        }
+        try {
+          await copyLink(url);
+          toast("Link copied");
+        } catch (e) {
+          window.prompt("Copy this link to share the invitation:", url);
         }
       });
 

@@ -2,8 +2,8 @@ import functools
 import io
 import math
 import os
+import re
 from datetime import datetime
-from urllib.parse import quote
 
 import numpy as np
 import streamlit as st
@@ -23,28 +23,14 @@ groom_name = "Shyamal Roy"
 bride_name = "Tropa Rani Shill"
 groom_parents = "Gouranga Chandra Roy & Jharna Rani Roy"
 invocation = "SHREE SHREE GANESHAYA NAMAH"
-blessing_quote = (
-    "With the grace of the Almighty and His divine blessings, we are delighted "
-    "to celebrate a beautiful new beginning in our family’s journey."
-)
-invitation = (
-    f"We, {groom_parents}, cordially invite you to grace the auspicious "
-    "occasion of the wedding ceremony of our beloved younger son"
-)
-closing_note = (
-    "Your gracious presence, warm wishes, and heartfelt blessings will make "
-    "this joyous occasion even more special and memorable for our family."
-)
+blessing = "By the grace of the Almighty, a beautiful new beginning."
+invitation = "joyfully invite you to the wedding of their beloved younger son"
+closing_note = "Your presence and blessings will make our joy complete."
 wedding_date = datetime(2026, 12, 11)  # Shubho Bibaho
 reception_date = datetime(2026, 12, 13)
 reception_time = "8:00 PM"  # Dinner
 venue_name = "Grand Prince Chinese Restaurant"
-venue_address = "Mirpur-1, Dhaka-1216, Bangladesh"
-
-# Once the web invitation (shyamal-invitation/) is deployed, paste its address
-# here, e.g. "https://shyamal-tropa.netlify.app". The app will then also give a
-# personalised link for every guest.
-INVITATION_SITE_URL = ""
+venue_address = "Mirpur-1, Dhaka"
 
 # ---------------------------------------------------------------------------
 # Rendering setup
@@ -61,6 +47,8 @@ GOLD_DEEP = (150, 104, 38)
 THEMES = {
     "Royal maroon & gold": {
         "style": "royal",
+        "caption": "Maroon & gold with a marigold garland",
+        "region": (150, 1036),  # invocation centre .. lotus base, in design units
         "text": (247, 236, 218),
         "soft_text": (234, 214, 188),
         "heading": (228, 190, 106),
@@ -70,6 +58,8 @@ THEMES = {
     },
     "Classic floral": {
         "style": "floral",
+        "caption": "Soft pink watercolour florals",
+        "region": (165, 958),  # invocation centre .. venue address centre
         "text": (50, 50, 50),
         "soft_text": (50, 50, 50),
         "heading": (120, 40, 60),
@@ -106,12 +96,14 @@ def format_event_date(date):
 
 
 class Painter:
-    """Draws in 800 x 1100 design units onto a canvas scaled by `k`."""
+    """Draws in 800 x 1100 design units onto a canvas scaled by `k`.
+    With dry=True nothing is drawn: used to measure a layout before placing it."""
 
-    def __init__(self, image, k):
+    def __init__(self, image, k, dry=False):
         self.image = image
         self.draw = ImageDraw.Draw(image)
         self.k = k
+        self.dry = dry
 
     def s(self, value):
         return value * self.k
@@ -126,9 +118,13 @@ class Painter:
         return self.draw.textlength(text, font=font) / self.k
 
     def text(self, x, y, text, font, fill, anchor="mm"):
+        if self.dry:
+            return
         self.draw.text(self.pt(x, y), text, font=font, fill=fill, anchor=anchor)
 
     def line(self, points, fill, width=1):
+        if self.dry:
+            return
         self.draw.line(
             [self.pt(x, y) for x, y in points],
             fill=fill,
@@ -137,6 +133,8 @@ class Painter:
         )
 
     def polygon(self, points, fill=None, outline=None, width=1):
+        if self.dry:
+            return
         self.draw.polygon(
             [self.pt(x, y) for x, y in points],
             fill=fill,
@@ -145,6 +143,8 @@ class Painter:
         )
 
     def circle(self, x, y, r, fill=None, outline=None, width=1):
+        if self.dry:
+            return
         self.draw.ellipse(
             [self.pt(x - r, y - r), self.pt(x + r, y + r)],
             fill=fill,
@@ -153,6 +153,8 @@ class Painter:
         )
 
     def rectangle(self, x0, y0, x1, y1, outline, width=1):
+        if self.dry:
+            return
         self.draw.rectangle(
             [self.pt(x0, y0), self.pt(x1, y1)],
             outline=outline,
@@ -213,6 +215,8 @@ def draw_spaced_text(p, center_x, y, text, font, fill, spacing):
 def draw_foil_text(p, x, y, text, font):
     """Gold-foil text: a soft shadow, then a vertical gold gradient through the
     glyph mask."""
+    if p.dry:
+        return
     box = [round(v) for v in p.draw.textbbox(p.pt(x, y), text, font=font, anchor="mm")]
     pad = round(p.s(6))
     left, top = box[0] - pad, box[1] - pad
@@ -410,174 +414,197 @@ def card_base(theme_name):
     return base
 
 
-def generate_card(guest_name, theme_name="Royal maroon & gold"):
-    theme = THEMES[theme_name]
-    k = RENDER_SCALE
-    card = card_base(theme_name).copy()
-    p = Painter(card, k)
-    center_x = DESIGN_W / 2
+@functools.lru_cache(maxsize=None)
+def fonts(k):
+    """All fonts used on the card, at render scale (loaded once)."""
+    f = lambda name, size: load_font(name, round(size * k))  # noqa: E731
+    return {
+        "invocation": f("Lora-Bold.ttf", 21),
+        "blessing": f("Lora-Italic.ttf", 21),
+        "hosts": f("Lora-Regular.ttf", 25),
+        "invite": f("Lora-Italic.ttf", 21),
+        "with": f("Lora-Italic.ttf", 23),
+        "names": f("GreatVibes-Regular.ttf", 58),
+        "closing": f("Lora-Italic.ttf", 21),
+        "heading": f("Lora-Bold.ttf", 19),
+        "detail": f("Lora-Regular.ttf", 21),
+        "venue": f("Lora-Regular.ttf", 25),
+    }
 
-    text_color = theme["text"]
-    heading_color = theme["heading"]
 
-    invocation_font = p.font("Lora-Bold.ttf", 21)
-    quote_font = p.font("Lora-Italic.ttf", 20)
-    regular_font = p.font("Lora-Regular.ttf", 22)
-    small_font = p.font("Lora-Regular.ttf", 20)
-    with_font = p.font("Lora-Italic.ttf", 22)
-    heading_font = p.font("Lora-Bold.ttf", 19)
-    venue_font = p.font("Lora-Regular.ttf", 24)
-    names_font = p.font("GreatVibes-Regular.ttf", 48)
+def greeting_layout(p, guest_name):
+    """Font and lines for "Dear <guest>": shrinks for long names, then wraps."""
+    greeting = f"Dear {guest_name}"
+    size = 44
+    font = p.font("GreatVibes-Regular.ttf", size)
+    while size > 32 and p.textlength(greeting, font) > 590:
+        size -= 2
+        font = p.font("GreatVibes-Regular.ttf", size)
+    return font, wrap_text(p, greeting, font, 590)
 
-    y = 158
 
-    # ॥ SHREE SHREE GANESHAYA NAMAH ॥  (dandas drawn: no Devanagari in the fonts)
-    text_width = draw_spaced_text(p, center_x, y, invocation, invocation_font, heading_color, 3)
-    cap_top, cap_bottom = (v / k for v in invocation_font.getbbox("H", anchor="lm")[1::2])
-    danda_y = y + (cap_top + cap_bottom) / 2
-    danda_half = (cap_bottom - cap_top) / 2 + 3
+def compose(p, guest_name, theme, y):
+    """Lay out every line of text from y downwards; returns the last line's y.
+    Run once on a dry Painter to measure, then for real at the centred position."""
+    f = fonts(p.k)
+    cx = DESIGN_W / 2
+    text, soft, heading, accent = theme["text"], theme["soft_text"], theme["heading"], theme["accent"]
+
+    # ॥ SHREE SHREE GANESHAYA NAMAH ॥  (dandas drawn: the fonts have no Devanagari)
+    width = draw_spaced_text(p, cx, y, invocation, f["invocation"], heading, 3)
+    cap_top, cap_bottom = (v / p.k for v in f["invocation"].getbbox("H", anchor="lm")[1::2])
+    mid, half = y + (cap_top + cap_bottom) / 2, (cap_bottom - cap_top) / 2 + 3
     for side in (-1, 1):
-        dx = center_x + side * (text_width / 2 + 22)
+        dx = cx + side * (width / 2 + 22)
         for offset in (-4, 4):
-            p.line([(dx + offset, danda_y - danda_half), (dx + offset, danda_y + danda_half)], heading_color, 2)
-    y += 45
+            p.line([(dx + offset, mid - half), (dx + offset, mid + half)], heading, 2)
+    y += 46
 
-    # Blessing quote
-    quote_lines = wrap_text(p, f"“{blessing_quote}”", quote_font, 560)
-    y = draw_centered_lines(p, center_x, y, quote_lines, quote_font, theme["soft_text"], 28)
-    y += 30
+    lines = wrap_text(p, f"“{blessing}”", f["blessing"], 590)
+    y = draw_centered_lines(p, cx, y, lines, f["blessing"], soft, 28) + 30
 
-    # Guest greeting: shrinks for long names, then wraps rather than overflowing
     if guest_name:
-        greeting = f"Dear {guest_name}"
-        size_pt = 42
-        greeting_font = p.font("GreatVibes-Regular.ttf", size_pt)
-        while size_pt > 32 and p.textlength(greeting, greeting_font) > 580:
-            size_pt -= 2
-            greeting_font = p.font("GreatVibes-Regular.ttf", size_pt)
-        greeting_lines = wrap_text(p, greeting, greeting_font, 580)
-        if len(greeting_lines) > 1:
-            y -= 8
-        y = draw_centered_lines(p, center_x, y, greeting_lines, greeting_font, theme["greeting"], 36)
-        y += 16 if len(greeting_lines) == 1 else 6
+        font, lines = greeting_layout(p, guest_name)
+        y = draw_centered_lines(p, cx, y, lines, font, theme["greeting"], 38) + 16
 
-    # Parents' invitation
-    invitation_lines = wrap_text(p, invitation, regular_font, 600)
-    y = draw_centered_lines(p, center_x, y, invitation_lines, regular_font, text_color, 30)
-    y += 30
+    p.text(cx, y, groom_parents, f["hosts"], text)
+    y += 32
+    lines = wrap_text(p, invitation, f["invite"], 600)
+    y = draw_centered_lines(p, cx, y, lines, f["invite"], soft, 28) + 40
 
-    # Groom with Bride
     for i, name in enumerate((groom_name, bride_name)):
         if theme["names"] == "foil":
-            draw_foil_text(p, center_x, y, name, names_font)
+            draw_foil_text(p, cx, y, name, f["names"])
         else:
-            p.text(center_x, y, name, names_font, theme["names"])
+            p.text(cx, y, name, f["names"], theme["names"])
         if i == 0:
-            y += 42
-            p.text(center_x, y, "with", with_font, theme["greeting"])
-            y += 42
-    y += 52
+            y += 50
+            p.text(cx, y, "with", f["with"], theme["greeting"])
+            y += 52
+    y += 60
 
-    # Closing note
-    closing_lines = wrap_text(p, closing_note, small_font, 540)
-    y = draw_centered_lines(p, center_x, y, closing_lines, small_font, theme["soft_text"], 28)
-    y += 10
+    lines = wrap_text(p, closing_note, f["closing"], 590)
+    y = draw_centered_lines(p, cx, y, lines, f["closing"], soft, 28) + 8
 
-    # Divider: thin rule with a diamond
-    accent = theme["accent"]
-    p.line([(center_x - 130, y), (center_x - 10, y)], accent, 1)
-    p.line([(center_x + 10, y), (center_x + 130, y)], accent, 1)
-    p.polygon([(center_x, y - 5), (center_x + 5, y), (center_x, y + 5), (center_x - 5, y)], fill=accent)
-    y += 34
+    # thin rule with a diamond
+    p.line([(cx - 130, y), (cx - 10, y)], accent, 1)
+    p.line([(cx + 10, y), (cx + 130, y)], accent, 1)
+    p.polygon([(cx, y - 5), (cx + 5, y), (cx, y + 5), (cx - 5, y)], fill=accent)
+    y += 40
 
-    # Events: Shubho Bibaho (left) and Reception (right)
-    left_x, right_x = center_x - 140, center_x + 140
+    # Shubho Bibaho (left) | Reception (right); weekdays come from the dates
+    left_x, right_x = cx - 140, cx + 140
     wedding_lines = list(format_event_date(wedding_date))
     reception_lines = list(format_event_date(reception_date)) + [f"Dinner: {reception_time}"]
-    draw_spaced_text(p, left_x, y, "SHUBHO BIBAHO", heading_font, heading_color, 2)
-    draw_spaced_text(p, right_x, y, "RECEPTION", heading_font, heading_color, 2)
-    line_height = 27
-    p.line([(center_x, y - 8), (center_x, y + 30 + line_height * (len(reception_lines) - 1) + 8)], accent, 1)
-    y += 30
-    draw_centered_lines(p, left_x, y, wedding_lines, small_font, text_color, line_height)
-    y = draw_centered_lines(p, right_x, y, reception_lines, small_font, text_color, line_height)
-    y += 18
+    draw_spaced_text(p, left_x, y, "SHUBHO BIBAHO", f["heading"], heading, 2)
+    draw_spaced_text(p, right_x, y, "RECEPTION", f["heading"], heading, 2)
+    line_height = 28
+    p.line([(cx, y - 8), (cx, y + 31 + line_height * (len(reception_lines) - 1) + 8)], accent, 1)
+    y += 31
+    draw_centered_lines(p, left_x, y, wedding_lines, f["detail"], text, line_height)
+    y = draw_centered_lines(p, right_x, y, reception_lines, f["detail"], text, line_height) + 22
 
-    # Venue
-    draw_spaced_text(p, center_x, y, "VENUE", heading_font, heading_color, 2)
-    y += 32
-    p.text(center_x, y, venue_name, venue_font, text_color)
-    y += 30
-    p.text(center_x, y, venue_address, small_font, theme["soft_text"])
+    draw_spaced_text(p, cx, y, "VENUE", f["heading"], heading, 2)
+    y += 33
+    p.text(cx, y, venue_name, f["venue"], text)
+    y += 31
+    p.text(cx, y, venue_address, f["detail"], soft)
+    return y
 
+
+LOTUS_GAP = 64  # royal template: lotus base sits this far below the last line
+
+
+def generate_card(guest_name, theme_name="Royal maroon & gold"):
+    theme = THEMES[theme_name]
+    card = card_base(theme_name).copy()
+
+    # Measure, then centre the whole block in the template's free area
+    top, bottom = theme["region"]
+    extra = LOTUS_GAP if theme["style"] == "royal" else 0
+    height = compose(Painter(card, RENDER_SCALE, dry=True), guest_name, theme, 0) + extra
+    y0 = top + max(0, (bottom - top - height) / 2)
+
+    p = Painter(card, RENDER_SCALE)
+    y_end = compose(p, guest_name, theme, y0)
     if theme["style"] == "royal":
-        # Lotus follows the text, so a two-line guest name never collides with it
-        draw_lotus(p, center_x, min(1036, y + 64))
+        draw_lotus(p, DESIGN_W / 2, min(1036, y_end + LOTUS_GAP))
 
-    out_size = (DESIGN_W * OUTPUT_SCALE, DESIGN_H * OUTPUT_SCALE)
-    return card.resize(out_size, Image.LANCZOS)
-
-
-def image_bytes(img, fmt):
-    buffer = io.BytesIO()
-    if fmt == "JPEG":
-        img.save(buffer, format="JPEG", quality=92, optimize=True)
-    else:
-        img.save(buffer, format="PNG", optimize=True)
-    return buffer.getvalue()
+    return card.resize((DESIGN_W * OUTPUT_SCALE, DESIGN_H * OUTPUT_SCALE), Image.LANCZOS)
 
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+# Lora and Great Vibes cover Latin script only (incl. accents); Bangla etc. would
+# print as empty boxes, so such names are caught before generating.
+ALLOWED_EXTRA = set("‘’“”–—·•")
+
+
+def clean_name(raw):
+    return " ".join(raw.split())
+
+
+def unsupported_chars(name):
+    return sorted({c for c in name if ord(c) > 0x24F and c not in ALLOWED_EXTRA})
+
+
+def safe_filename(name):
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_") or "guest"
+
+
+@st.cache_data(show_spinner=False, max_entries=16)
+def render_card_files(guest_name, theme_name):
+    """Card as a full-size PNG (download) and a light JPEG (on-screen preview).
+    Cached, so regenerating a name or re-running after a download is instant."""
+    card = generate_card(guest_name, theme_name)
+    png = io.BytesIO()
+    card.save(png, format="PNG", compress_level=6)
+    preview = io.BytesIO()
+    card.resize((800, 1100), Image.LANCZOS).save(preview, format="JPEG", quality=88)
+    return png.getvalue(), preview.getvalue()
+
+
 st.title("💍 Shyamal's Wedding Invitation Card Generator")
-st.markdown(
-    "Generate a personalized wedding invitation card by entering the guest's name below."
-)
+st.markdown("Type a guest's name, pick a template, and download a personalized card.")
 
-guest_name = st.text_input("Guest Name", placeholder="Enter guest's name").strip()
-theme_name = st.radio("Card design", list(THEMES), horizontal=True)
+with st.form("card_form", border=False):
+    guest_input = st.text_input("Guest Name", placeholder="e.g. Mr. Rahim Uddin", max_chars=80)
+    template = st.radio(
+        "Template",
+        list(THEMES),
+        captions=[t["caption"] for t in THEMES.values()],
+        horizontal=True,
+    )
+    submitted = st.form_submit_button("Generate Card", type="primary", use_container_width=True)
 
-if st.button("Generate Card", type="primary"):
-    if not guest_name:
+if submitted:
+    name = clean_name(guest_input)
+    bad = unsupported_chars(name)
+    if not name:
         st.warning("Please enter the guest name to generate a personalized card.")
+    elif bad:
+        st.warning(
+            "Please type the name in English letters. The card's fonts can't draw: "
+            + " ".join(bad)
+        )
     else:
         with st.spinner("Designing the card..."):
-            card = generate_card(guest_name, theme_name)
-        st.session_state["card"] = {
-            "guest": guest_name,
-            "theme": theme_name,
-            "png": image_bytes(card, "PNG"),
-            "jpg": image_bytes(card, "JPEG"),
-        }
+            png, preview = render_card_files(name, template)
+        st.session_state["card"] = {"guest": name, "template": template, "png": png, "preview": preview}
 
-result = st.session_state.get("card")
-if result and result["guest"] == guest_name and result["theme"] == theme_name:
-    st.subheader("Your Wedding Invitation Card")
-    st.image(result["png"], use_column_width=True)
-
-    file_stem = f"shyamal_wedding_invitation_{guest_name.replace(' ', '_')}"
-    col_png, col_jpg = st.columns(2)
-    col_png.download_button(
-        "💾 Download PNG (print quality)",
-        result["png"],
-        file_name=f"{file_stem}.png",
+card = st.session_state.get("card")
+if card:
+    st.download_button(
+        "⬇️ Download PNG",
+        card["png"],
+        file_name=f"shyamal_wedding_invitation_{safe_filename(card['guest'])}.png",
         mime="image/png",
+        type="primary",
         use_container_width=True,
+        key="download_png",
     )
-    col_jpg.download_button(
-        "📱 Download JPG (for WhatsApp)",
-        result["jpg"],
-        file_name=f"{file_stem}.jpg",
-        mime="image/jpeg",
-        use_container_width=True,
-    )
-
-    if INVITATION_SITE_URL:
-        st.markdown("**Personalised web invitation link**")
-        st.code(f"{INVITATION_SITE_URL.rstrip('/')}/?to={quote(guest_name)}", language=None)
-
-    st.success("Card generated successfully! Use the buttons above to download.")
+    st.image(card["preview"], caption=f"{card['guest']} · {card['template']}", use_column_width=True)
 
 # Footer
 st.markdown("---")
