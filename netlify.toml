@@ -1,0 +1,5 @@
+# Netlify settings for the web invitation in shyamal-invitation/.
+# Connect this repo on Netlify and it publishes that folder as-is (no build step).
+# The Streamlit apps in this repo are unaffected.
+[build]
+  publish = "shyamal-invitation"
