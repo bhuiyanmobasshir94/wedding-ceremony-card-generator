@@ -1,39 +1,45 @@
 # Shyamal & Tropa · web invitation
 
-A single-page wedding invitation: palace doors with a marigold toran that open on tap,
-a falling-petal shower, the invitation itself, a live countdown, both celebrations with
-"add to calendar" buttons, the venue with Google Maps, and a share button.
-Plain HTML/CSS/JS, no build step.
+One page for every guest: palace doors with a marigold toran that open on tap into a
+petal shower, then the invitation, a live countdown, both celebrations with
+"add to calendar" buttons, the venue with Google Maps, and a Share button.
+Plain HTML/CSS/JS in `index.html`, no build step.
 
-## Deploy
+There are two ways to put it online. Both serve this same `index.html`.
 
-**Netlify, drag and drop:** open <https://app.netlify.com/drop> and drop this
-`shyamal-invitation` folder.
+## Option A: Streamlit Community Cloud
 
-**Netlify, from GitHub:** "Add new site → Import an existing project" and pick this repo.
-`netlify.toml` at the repo root already tells Netlify to publish this folder.
+`shyamal-invitation-app.py` (in the repo root) shows this page full-screen, with
+Streamlit's header and padding hidden.
 
-Then, in Site settings, rename the site to something like `shyamal-tropa`.
+1. Go to <https://share.streamlit.io> → **Create app** → **Deploy a public app from GitHub**.
+2. Repository: `bhuiyanmobasshir94/wedding-ceremony-card-generator`, branch `main`
+   (or `add-shyamal-app` before the PR is merged).
+3. Main file path: `shyamal-invitation-app.py`.
+4. App URL: pick something like `shyamal-tropa` → `https://shyamal-tropa.streamlit.app`.
+5. **Deploy**. The existing `requirements.txt` is enough.
 
-## After deploying
+Things to know:
+- Free Community Cloud apps **go to sleep after 12 hours without visitors**. The
+  next guest then sees a "wake this app up" button and waits about 30 seconds.
+  Open the link yourself now and then, or share it in bursts.
+- WhatsApp/Messenger show Streamlit's generic preview for the link, not the
+  maroon card in `og-image.jpg`.
 
-1. In `index.html`, replace every `YOUR-SITE.netlify.app` with your real address
-   (in the `og:` and `twitter:` tags near the top). This is what makes WhatsApp and
-   Messenger show the maroon preview card (`og-image.jpg`) when the link is shared.
-2. In `shyamal-app.py`, set `INVITATION_SITE_URL` to the same address. The card
-   generator will then also give a personalised web link for every guest.
+## Option B: Netlify (never sleeps, shows the maroon link preview)
 
-## Personalised links
+**Drag and drop (2 minutes):**
+1. Sign in at <https://app.netlify.com/drop>.
+2. Drag this `shyamal-invitation` folder onto the page. It goes live straight away.
+3. **Site configuration → Change site name** → e.g. `shyamal-tropa` →
+   `https://shyamal-tropa.netlify.app`.
 
-Add `?to=` and the guest's name to the address:
+**Or from GitHub (redeploys on every push):** **Add new site → Import an existing
+project → GitHub** → pick this repo. `netlify.toml` in the repo root already
+publishes this folder, so leave the build settings empty and click **Deploy**.
 
-```
-https://shyamal-tropa.netlify.app/?to=Mr.%20Rahim%20Uddin
-```
-
-The doors then greet "Dear Mr. Rahim Uddin", and so does the invitation. The page's own
-Share button always shares the plain link, so a guest who forwards it never passes on
-their name.
+**Then, for the link preview:** in `index.html`, replace each `YOUR-SITE.netlify.app`
+(in the `og:` and `twitter:` tags near the top) with your real address, and deploy again.
 
 ## Editing
 
@@ -42,6 +48,6 @@ Dates, venue, map search and music are in the `CONFIG` block at the bottom of
 
 - **Music:** put an mp3 next to `index.html` and set `music: "music.mp3"`. A play/pause
   button appears and the music starts when the doors open.
-- **Shubho Bibaho location:** no time or separate venue was given, so it is added to
+- **Shubho Bibaho location:** no time or separate venue was given, so it goes into
   calendars as an all-day event without a location. If it is also at the restaurant,
   set `atVenue: true`.
